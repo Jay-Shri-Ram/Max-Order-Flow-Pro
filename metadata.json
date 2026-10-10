@@ -1,0 +1,6 @@
+{
+  "name": "OrderFlow Pro",
+  "description": "Ultra-Modern Multi-Tenant Cloud POS & Order Engine with hybrid offline Dexie.js, real-time cloud sync, thermal & A4 invoice printing, inventory tracking, customer analytics, and multi-role operations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>OrderFlow Pro</title>
+    <meta name="description" content="Ultra-Modern Multi-Tenant Cloud POS & Order Engine with hybrid offline Dexie.js, real-time cloud sync, thermal & A4 invoice printing, inventory tracking, customer analytics, and multi-role operations." />
+    <meta property="og:title" content="OrderFlow Pro" />
+    <meta property="og:description" content="Ultra-Modern Multi-Tenant Cloud POS & Order Engine with hybrid offline Dexie.js, real-time cloud sync, thermal & A4 invoice printing, inventory tracking, customer analytics, and multi-role operations." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      @media print {
+        body * {
+          visibility: hidden !important;
+        }
+        #printable-invoice-area,
+        #printable-invoice-area * {
+          visibility: visible !important;
+        }
+        #printable-invoice-area {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+          color: black !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="h-full bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div id="root" class="h-full"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

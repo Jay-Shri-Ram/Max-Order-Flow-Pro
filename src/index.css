@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: 99 102 241;
+    --primary-hover: 79 70 229;
+    --primary-glow: rgba(99, 102, 241, 0.35);
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  [data-theme="indigo"] {
+    --primary: 99 102 241;
+    --primary-hover: 79 70 229;
+    --primary-glow: rgba(99, 102, 241, 0.35);
+  }
+  [data-theme="emerald"] {
+    --primary: 16 185 129;
+    --primary-hover: 5 150 105;
+    --primary-glow: rgba(16, 185, 129, 0.35);
+  }
+  [data-theme="ocean"] {
+    --primary: 2 132 199;
+    --primary-hover: 3 105 161;
+    --primary-glow: rgba(2, 132, 199, 0.35);
+  }
+  [data-theme="rose"] {
+    --primary: 244 63 94;
+    --primary-hover: 225 29 72;
+    --primary-glow: rgba(244, 63, 94, 0.35);
+  }
+  [data-theme="amber"] {
+    --primary: 245 158 11;
+    --primary-hover: 217 119 6;
+    --primary-glow: rgba(245, 158, 11, 0.35);
+  }
+  [data-theme="violet"] {
+    --primary: 139 92 246;
+    --primary-hover: 124 58 237;
+    --primary-glow: rgba(139, 92, 246, 0.35);
+  }
+  [data-theme="teal"] {
+    --primary: 20 184 166;
+    --primary-hover: 13 148 136;
+    --primary-glow: rgba(20, 184, 166, 0.35);
+  }
+  [data-theme="slate"] {
+    --primary: 100 116 139;
+    --primary-hover: 71 85 105;
+    --primary-glow: rgba(100, 116, 139, 0.35);
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+  
+  .font-mono-numbers {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+/* Dynamic theme background and text utilities */
+.bg-theme-primary {
+  background-color: rgb(var(--primary));
+}
+.text-theme-primary {
+  color: rgb(var(--primary));
+}
+.border-theme-primary {
+  border-color: rgb(var(--primary));
+}
+.ring-theme-primary {
+  --tw-ring-color: rgb(var(--primary));
+}
+.shadow-theme-glow {
+  box-shadow: 0 0 20px -2px var(--primary-glow);
+}
