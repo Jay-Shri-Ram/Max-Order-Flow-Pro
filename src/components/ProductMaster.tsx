@@ -3,6 +3,7 @@ import { Product, Category, Unit, StoreSettings, Language } from '../types';
 import { translations } from '../utils/i18n';
 import { formatCurrency, formatDateDDMMYYYY } from '../utils/formatters';
 import { exportDataToExcel } from '../services/exportService';
+import * as XLSX from 'xlsx';
 import { 
   PackageCheck, 
   Search, 
@@ -17,7 +18,9 @@ import {
   Barcode, 
   ArrowUpRight, 
   ArrowDownRight, 
-  RefreshCw 
+  RefreshCw,
+  Upload,
+  FileDown
 } from 'lucide-react';
 
 interface ProductMasterProps {
@@ -33,6 +36,7 @@ interface ProductMasterProps {
   onSaveUnit: (unit: Unit) => Promise<void>;
   onDeleteUnit: (unitId: string) => Promise<void>;
   onAdjustStock: (productId: string, adjustmentQty: number, reason: string) => Promise<void>;
+  onImportProducts?: (products: Product[]) => Promise<void>;
   onShowToast: (title: string, message: string, type: 'success' | 'warning' | 'error' | 'info') => void;
 }
 
@@ -49,6 +53,7 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
   onSaveUnit,
   onDeleteUnit,
   onAdjustStock,
+  onImportProducts,
   onShowToast
 }) => {
   const t = translations[lang];
@@ -214,6 +219,87 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
     onShowToast('Catalog Exported', 'Full inventory sheet exported to Excel.', 'success');
   };
 
+  const handleDownloadTemplate = () => {
+    const templateRows = [
+      {
+        'Product Name': 'Fortune Sunlite Refined Oil (15L Tin)',
+        'SKU': 'FORT-OIL-15L',
+        'Category': 'Grains & Staples',
+        'Unit': 'Box',
+        'Cost Price': 1650,
+        'Selling Price': 1820,
+        'Opening Stock': 28,
+        'Reorder Level': 10,
+        'Barcode': '890600728101'
+      },
+      {
+        'Product Name': 'Tata Tea Gold Leaf 1kg Pack',
+        'SKU': 'TATA-GOLD-1K',
+        'Category': 'Beverages & Syrups',
+        'Unit': 'Pcs',
+        'Cost Price': 460,
+        'Selling Price': 530,
+        'Opening Stock': 80,
+        'Reorder Level': 25,
+        'Barcode': '890105200115'
+      }
+    ];
+    exportDataToExcel(templateRows, 'Product Template', 'Products_Import_Template');
+    onShowToast('Template Downloaded', 'Use this Excel format for batch item imports.', 'info');
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        if (!data || data.length === 0) {
+          onShowToast('Empty Sheet', 'No rows found in uploaded file.', 'warning');
+          return;
+        }
+
+        const now = new Date().toISOString();
+        const importedProducts: Product[] = data.map((row, idx) => ({
+          id: `p_imp_${Date.now()}_${idx}`,
+          name: String(row['Product Name'] || row['Name'] || row['Item Name'] || `Item ${idx + 1}`).trim(),
+          sku: String(row['SKU'] || row['Item Code'] || `SKU-${Date.now().toString().slice(-4)}-${idx + 1}`).trim(),
+          category: String(row['Category'] || 'General').trim(),
+          unit: String(row['Unit'] || 'Pcs').trim(),
+          costPrice: Number(row['Cost Price'] || row['Cost']) || 0,
+          sellingPrice: Number(row['Selling Price'] || row['Price'] || row['Rate']) || 0,
+          stock: Number(row['Opening Stock'] || row['Stock'] || row['Qty']) || 0,
+          reorderLevel: Number(row['Reorder Level'] || row['Reorder']) || 10,
+          barcode: String(row['Barcode'] || '').trim(),
+          isActive: true,
+          tenantId: settings.storeName,
+          updatedAt: now
+        }));
+
+        if (onImportProducts) {
+          await onImportProducts(importedProducts);
+        } else {
+          for (const p of importedProducts) {
+            await onSaveProduct(p);
+          }
+        }
+
+        onShowToast('Import Success', `${importedProducts.length} items successfully imported into inventory!`, 'success');
+      } catch (err: any) {
+        onShowToast('Import Failed', err.message || 'Error processing Excel file', 'error');
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
   return (
     <div className="space-y-5 animate-in fade-in duration-300 pb-16 md:pb-6">
       
@@ -229,7 +315,7 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleOpenAddProduct}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
@@ -238,12 +324,26 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
             <span>Add Product</span>
           </button>
 
+          <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer">
+            <Upload className="w-3.5 h-3.5 text-sky-400" />
+            <span>Import Excel</span>
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleImportExcel} className="hidden" />
+          </label>
+
           <button
             onClick={handleExportCatalog}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
             <span>Export Catalog</span>
+          </button>
+
+          <button
+            onClick={handleDownloadTemplate}
+            className="text-xs text-slate-400 hover:text-indigo-300 underline font-medium ml-1 cursor-pointer flex items-center gap-1"
+          >
+            <FileDown className="w-3.5 h-3.5" />
+            <span>Download Template</span>
           </button>
         </div>
       </div>

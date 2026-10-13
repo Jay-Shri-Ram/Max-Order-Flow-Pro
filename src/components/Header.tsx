@@ -20,7 +20,9 @@ import {
   Clock, 
   Layers, 
   Sparkles,
-  Palette
+  Palette,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { translations } from '../utils/i18n';
 
@@ -36,6 +38,8 @@ interface HeaderProps {
   onTriggerSync: () => void;
   deletedOrdersCount: number;
   onOpenRecycleBin: () => void;
+  themeMode: 'light' | 'dark';
+  onToggleThemeMode: () => void;
   onOpenDocs: () => void;
   onOpenAuth: () => void;
   onOpenPasswordUpdate: () => void;
@@ -60,6 +64,8 @@ export const Header: React.FC<HeaderProps> = ({
   onAccentChange,
   lang,
   onLangChange,
+  themeMode,
+  onToggleThemeMode,
   currentUser,
   onSwitchUserRole,
   syncStatus,
@@ -220,11 +226,24 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
+          {/* Light / Dark Mode Toggle */}
+          <button
+            onClick={onToggleThemeMode}
+            title={`Switch to ${themeMode === 'dark' ? 'Light' : 'Dark'} Mode`}
+            className="flex items-center p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+          >
+            {themeMode === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-indigo-400" />
+            )}
+          </button>
+
           {/* Multilingual Switcher (EN / हिन्दी) */}
           <button
             onClick={() => onLangChange(lang === 'en' ? 'hi' : 'en')}
             title="Toggle Language: English / हिन्दी"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white hover:border-slate-700 transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white hover:border-slate-700 transition-colors cursor-pointer"
           >
             <span className="font-bold text-indigo-400">{lang === 'en' ? 'EN' : 'हिन्दी'}</span>
           </button>

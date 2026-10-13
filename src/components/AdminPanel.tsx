@@ -21,11 +21,23 @@ import {
   FileSpreadsheet, 
   Database, 
   Save, 
-  RotateCcw, 
+  RotateCcw,
   Cloud, 
   CheckCircle2,
-  Lock
+  Lock,
+  Copy,
+  Check,
+  ExternalLink,
+  RefreshCw,
+  Play
 } from 'lucide-react';
+import { 
+  testFirestoreConnection, 
+  syncLocalToFirestore, 
+  syncFirestoreToLocal, 
+  getActiveFirebaseConfig, 
+  DEFAULT_FIREBASE_CONFIG 
+} from '../services/firebaseSync';
 
 interface AdminPanelProps {
   users: UserAccount[];
@@ -82,6 +94,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [defaultTaxRate, setDefaultTaxRate] = useState<number>(settings.defaultTaxRate);
   const [defaultPrintFormat, setDefaultPrintFormat] = useState<any>(settings.defaultPrintFormat);
   const [terms, setTerms] = useState<string>(settings.terms);
+
+  // Firebase Cloud Test & Sync State
+  const [testingFirebase, setTestingFirebase] = useState<boolean>(false);
+  const [connectionMessage, setConnectionMessage] = useState<string | null>(null);
+  const [syncingCloud, setSyncingCloud] = useState<boolean>(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<boolean>(false);
+
+  const handleTestConnection = async () => {
+    setTestingFirebase(true);
+    setConnectionMessage(null);
+    const res = await testFirestoreConnection();
+    setTestingFirebase(false);
+    setConnectionMessage(res.message);
+    if (res.success) {
+      onShowToast('Firebase Connected', res.message, 'success');
+    } else {
+      onShowToast('Firebase Status', res.message, 'info');
+    }
+  };
+
+  const handlePushToCloud = async () => {
+    setSyncingCloud(true);
+    const res = await syncLocalToFirestore(orders, products, customers);
+    setSyncingCloud(false);
+    if (res.success) {
+      onShowToast('Cloud Synced', res.message, 'success');
+    } else {
+      onShowToast('Sync Status', res.message, 'warning');
+    }
+  };
+
+  const handlePullFromCloud = async () => {
+    setSyncingCloud(true);
+    const res = await syncFirestoreToLocal();
+    setSyncingCloud(false);
+    if (res.success) {
+      onShowToast('Cloud Pulled', res.message, 'success');
+    } else {
+      onShowToast('Sync Status', res.message, 'warning');
+    }
+  };
 
   // Handle Add Staff User
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -533,53 +586,142 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* SUB-TAB 4: FIREBASE CLOUD SYNC */}
       {activeSubTab === 'cloud' && (
-        <div className="bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl backdrop-blur-md space-y-4 text-xs">
-          <div className="flex items-center gap-3">
-            <Cloud className="w-8 h-8 text-sky-400" />
-            <div>
-              <h2 className="text-sm font-semibold text-white">Firebase Cloud & Real-time Broadcast Sync</h2>
-              <p className="text-slate-400">Hybrid offline IndexedDB architecture with cloud synchronization.</p>
+        <div className="bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl backdrop-blur-md space-y-5 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Cloud className="w-8 h-8 text-sky-400 shrink-0" />
+              <div>
+                <h2 className="text-sm font-semibold text-white">Firebase Cloud Database & Sync Center</h2>
+                <p className="text-slate-400">Integrated Firebase Firestore for live cloud backups and multi-device persistence.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={testingFirebase}
+                onClick={handleTestConnection}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-xs shadow-md transition-colors cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${testingFirebase ? 'animate-spin' : ''}`} />
+                <span>Test Connection</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={syncingCloud}
+                onClick={handlePushToCloud}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-xs shadow-md transition-colors cursor-pointer"
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>Push to Cloud</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={syncingCloud}
+                onClick={handlePullFromCloud}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold text-xs border border-slate-700 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Pull from Cloud</span>
+              </button>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          {/* Connection Result Banner */}
+          {connectionMessage && (
+            <div className="p-3 rounded-xl bg-slate-950 border border-sky-500/40 text-sky-300 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-sky-400 shrink-0" />
+                <span>{connectionMessage}</span>
+              </div>
+              <button onClick={() => setConnectionMessage(null)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+          )}
+
+          {/* Active Config Parameters */}
+          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-white">Hybrid Cloud Engine Status</span>
+              <span className="font-semibold text-white">Active Firebase Project Credentials</span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
-                OPERATIONAL
+                CONNECTED
               </span>
             </div>
-            <p className="text-slate-400 text-[11px] leading-relaxed">
-              OrderFlow Pro uses local IndexedDB via Dexie.js for 0-latency offline access, coupled with the BroadcastChannel API to sync changes across all browser tabs without reloading. Cloud snapshots replicate orders, catalog masters, and customer accounts to Firestore.
-            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[11px]">
+              <div>
+                <label className="text-slate-500 block mb-0.5">Project ID:</label>
+                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-white font-semibold">
+                  {DEFAULT_FIREBASE_CONFIG.projectId}
+                </div>
+              </div>
+              <div>
+                <label className="text-slate-500 block mb-0.5">Auth Domain:</label>
+                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                  {DEFAULT_FIREBASE_CONFIG.authDomain}
+                </div>
+              </div>
+              <div>
+                <label className="text-slate-500 block mb-0.5">API Key:</label>
+                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 truncate">
+                  {DEFAULT_FIREBASE_CONFIG.apiKey.slice(0, 14)}... (Protected)
+                </div>
+              </div>
+              <div>
+                <label className="text-slate-500 block mb-0.5">App ID:</label>
+                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                  {DEFAULT_FIREBASE_CONFIG.appId}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <div className="grid grid-cols-2 gap-3">
+          {/* CDN & HTML Script Integration Guide (Requested by User) */}
+          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="text-slate-400 block mb-1">Firebase Project ID</label>
-                <input
-                  type="text"
-                  readOnly
-                  value="orderflow-pro-cloud"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-mono text-slate-300"
-                />
+                <h3 className="font-bold text-white text-xs">How to Add Firebase via CDN vs NPM</h3>
+                <p className="text-slate-400 text-[11px] mt-0.5">
+                  OrderFlow Pro uses the official modular SDK package (`firebase/app`, `firebase/firestore`). If you ever need to embed via CDN in standalone HTML:
+                </p>
               </div>
-              <div>
-                <label className="text-slate-400 block mb-1">Auth Domain</label>
-                <input
-                  type="text"
-                  readOnly
-                  value="orderflow-pro-cloud.firebaseapp.com"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-mono text-slate-300"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`<script type="module">\n  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";\n  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";\n\n  const firebaseConfig = {\n    apiKey: "${DEFAULT_FIREBASE_CONFIG.apiKey}",\n    authDomain: "${DEFAULT_FIREBASE_CONFIG.authDomain}",\n    projectId: "${DEFAULT_FIREBASE_CONFIG.projectId}",\n    storageBucket: "${DEFAULT_FIREBASE_CONFIG.storageBucket}",\n    messagingSenderId: "${DEFAULT_FIREBASE_CONFIG.messagingSenderId}",\n    appId: "${DEFAULT_FIREBASE_CONFIG.appId}",\n    measurementId: "${DEFAULT_FIREBASE_CONFIG.measurementId}"\n  };\n\n  const app = initializeApp(firebaseConfig);\n  const db = getFirestore(app);\n<\/script>`);
+                  setCopiedSnippet(true);
+                  setTimeout(() => setCopiedSnippet(false), 2500);
+                  onShowToast('Copied', 'Firebase CDN code snippet copied to clipboard!', 'info');
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 cursor-pointer"
+              >
+                {copiedSnippet ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                <span>{copiedSnippet ? 'Copied!' : 'Copy CDN Code'}</span>
+              </button>
             </div>
-            <div className="text-[11px] text-emerald-400 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>BroadcastChannel live on orderflow_channel_sync. Multi-device sync active.</span>
-            </div>
+
+            <pre className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-indigo-300 overflow-x-auto leading-relaxed">
+{`<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "${DEFAULT_FIREBASE_CONFIG.apiKey}",
+    authDomain: "${DEFAULT_FIREBASE_CONFIG.authDomain}",
+    projectId: "${DEFAULT_FIREBASE_CONFIG.projectId}",
+    storageBucket: "${DEFAULT_FIREBASE_CONFIG.storageBucket}",
+    messagingSenderId: "${DEFAULT_FIREBASE_CONFIG.messagingSenderId}",
+    appId: "${DEFAULT_FIREBASE_CONFIG.appId}",
+    measurementId: "${DEFAULT_FIREBASE_CONFIG.measurementId}"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+</script>`}
+            </pre>
           </div>
+
         </div>
       )}
 

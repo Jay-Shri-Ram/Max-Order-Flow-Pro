@@ -49,6 +49,9 @@ export default function App() {
   const [lang, setLang] = useState<Language>(() => {
     return (localStorage.getItem('orderflow_lang') as Language) || 'en';
   });
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('orderflow_theme_mode') as 'light' | 'dark') || 'dark';
+  });
 
   // Current Logged-in Staff User
   const [currentUser, setCurrentUser] = useState<UserAccount>({
@@ -88,6 +91,21 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', accent);
     localStorage.setItem('orderflow_accent', accent);
   }, [accent]);
+
+  // Set Light / Dark Mode attribute on root element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-mode', themeMode);
+    if (themeMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('orderflow_theme_mode', themeMode);
+  }, [themeMode]);
+
+  const handleToggleThemeMode = () => {
+    setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   useEffect(() => {
     localStorage.setItem('orderflow_lang', lang);
@@ -327,6 +345,12 @@ export default function App() {
     await cloudSync.triggerSync('CUSTOMERS_IMPORTED', { count: importedList.length });
   };
 
+  const handleImportProducts = async (importedList: Product[]) => {
+    await db.products.bulkPut(importedList);
+    await refreshFromDb();
+    await cloudSync.triggerSync('PRODUCTS_IMPORTED', { count: importedList.length });
+  };
+
   // Product & Inventory Operations
   const handleSaveProduct = async (prod: Product) => {
     await db.products.put(prod);
@@ -480,6 +504,8 @@ export default function App() {
         onAccentChange={setAccent}
         lang={lang}
         onLangChange={setLang}
+        themeMode={themeMode}
+        onToggleThemeMode={handleToggleThemeMode}
         currentUser={currentUser}
         onSwitchUserRole={(role) => {
           setCurrentUser({ ...currentUser, role });
@@ -632,6 +658,7 @@ export default function App() {
             onSaveUnit={handleSaveUnit}
             onDeleteUnit={handleDeleteUnit}
             onAdjustStock={handleAdjustStock}
+            onImportProducts={handleImportProducts}
             onShowToast={showToast}
           />
         )}

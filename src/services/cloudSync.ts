@@ -1,4 +1,5 @@
 import { db } from '../db/db';
+import { pushOrderToFirestore, initFirebase } from './firebaseSync';
 
 type SyncStatus = 'synced' | 'syncing' | 'offline';
 type SyncCallback = (status: SyncStatus) => void;
@@ -10,6 +11,15 @@ class CloudSyncService {
   private isOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
   constructor() {
+    // Initialize Firebase in background
+    if (typeof window !== 'undefined') {
+      try {
+        initFirebase();
+      } catch (e) {
+        console.warn('Firebase init deferred:', e);
+      }
+    }
+
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       this.channel = new BroadcastChannel('orderflow_channel_sync');
       this.channel.onmessage = (event) => {
@@ -69,7 +79,15 @@ class CloudSyncService {
     this.notifyStatus('syncing');
     this.broadcast(actionName, entityData);
 
-    // Simulate fast cloud snapshot confirmation / Firestore onSnapshot sync
+    // If an order was created, try pushing directly to Firestore
+    if (actionName === 'ORDER_CREATED' && entityData) {
+      try {
+        await pushOrderToFirestore(entityData);
+      } catch (err) {
+        console.warn('Firestore live push error:', err);
+      }
+    }
+
     setTimeout(() => {
       this.notifyStatus('synced');
     }, 450);
@@ -91,7 +109,6 @@ class CloudSyncService {
       if (queueRaw) {
         const queue = JSON.parse(queueRaw);
         if (queue.length > 0) {
-          // Process queued actions
           localStorage.removeItem('orderflow_offline_queue');
         }
       }
